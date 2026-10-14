@@ -1,4 +1,5 @@
-
+import os
+import ipaddress
 import requests
 import ssl
 import socket
@@ -32,6 +33,48 @@ def check_tls(hostname, port):
                 }
     except Exception as exc:
         return {"status": "REVIEW", "details": str(exc)}
+def validate_target(url):
+    parsed = urlparse(url)
+
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("Enter a valid HTTP or HTTPS URL.")
+
+    if parsed.username or parsed.password:
+        raise ValueError("Credentials in URLs are not allowed.")
+
+    if parsed.port not in (None, 80, 443):
+        raise ValueError("Only standard HTTP/HTTPS ports are allowed.")
+
+    allowed_hosts = {
+        host.strip().lower()
+        for host in os.environ.get(
+            "WEBSHIELD_ALLOWED_HOSTS", ""
+        ).split(",")
+        if host.strip()
+    }
+
+    hostname = parsed.hostname.rstrip(".").lower()
+
+    if hostname not in allowed_hosts:
+        raise ValueError("This domain is not on the authorized allowlist.")
+
+    try:
+        addresses = socket.getaddrinfo(
+            hostname, parsed.port or (443 if parsed.scheme == "https" else 80),
+            type=socket.SOCK_STREAM
+        )
+    except socket.gaierror:
+        raise ValueError("Could not resolve the target domain.")
+
+    if not addresses:
+        raise ValueError("No IP address found for the target.")
+
+    for address in {item[4][0] for item in addresses}:
+        ip = ipaddress.ip_address(address)
+        if not ip.is_global:
+            raise ValueError("Target resolves to a non-public IP address.")
+
+    return parsed
 
 def scan(url):
     parsed = urlparse(url)
@@ -56,10 +99,13 @@ def scan(url):
     }
 
     try:
+       
+    try:
         response = requests.get(
             url,
             timeout=10,
-            allow_redirects=True
+            allow_redirects=False,
+            stream=True
         )
         result["http_status"] = response.status_code
 
@@ -76,6 +122,8 @@ def scan(url):
                     "item": header,
                     "details": "Header detected."
                 })
+
+        response.close()
 
         for cookie in response.cookies:
             issues = []
