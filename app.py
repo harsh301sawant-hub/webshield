@@ -35,9 +35,9 @@ def validate_target(url):
     }
 
     hostname = parsed.hostname.lower().rstrip(".")
-    print("DEBUG hostname:", repr(hostname))
-    print("DEBUG allowed_hosts:", repr(allowed_hosts))
-
+    print("DEBUG hostname:", repr(hostname), flush=True)
+    print("DEBUG allowed_hosts:", repr(allowed_hosts), flush=True)
+    
     if hostname not in allowed_hosts:
         raise ValueError(
             "This host is not in your authorized domain allowlist."
