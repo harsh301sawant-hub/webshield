@@ -35,6 +35,8 @@ def validate_target(url):
     }
 
     hostname = parsed.hostname.lower().rstrip(".")
+    print("DEBUG hostname:", repr(hostname))
+    print("DEBUG allowed_hosts:", repr(allowed_hosts))
 
     if hostname not in allowed_hosts:
         raise ValueError(
