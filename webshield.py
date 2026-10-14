@@ -99,8 +99,6 @@ def scan(url):
     }
 
     try:
-       
-    try:
         response = requests.get(
             url,
             timeout=10,
